@@ -1,4 +1,6 @@
 from lib.config import UpdateConfig
+from lib.updator import GiteaUpdator
+from lib.version import GiteaVersion
 from os.path import exists
 import re
 import sys
@@ -24,7 +26,10 @@ def main():
 
     # load configuration and check values
     conf = UpdateConfig(conf_file)
-    
+
+    # initial updator
+    upd = GiteaUpdator(conf)
+    upd.CheckVersion()
 
 if __name__ == '__main__':
     main()

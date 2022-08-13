@@ -1,66 +1,61 @@
-
 import json
-import sys
 
 class UpdateConfig:
 
-    def __init__(self, conf_file:str) -> None:
+    def __init__(self, conf_file : str) -> None:
         """ Load config and initial it """
 
+        self.__conf_file = conf_file
+
         with open(conf_file) as fs:
-            js = json.load(fs)
+            self.__js = json.load(fs)
         
-        self.__release : str = js["release_url"]
-        self.__tar_ver : str = js["local_version"]
-        self.__root : str = js["exe_dir"]
-        self.__exe_name : str = js["exe_name"]
-        self.__svc_name : str = js["service_name"]
-        self.__log_name : str = js["log"]
-        
-        if (not self.__release):
+        if (not self.__js["release_url"]):
             raise Exception("'release_url' can not be null or empty")
-        if (not self.__tar_ver):
+        if (not self.__js["local_version"]):
             raise Exception("'local_version' can not be null or empty")
-        if (not self.__root):
-            raise Exception("'exe_dir' can not be null or empty")
-        if (not self.__exe_name):
+        if (not self.__js["exe_name"]):
             raise Exception("'exe_name' can not be null or empty")
-        if (not self.__svc_name):
+        if (not self.__js["service_name"]):
             raise Exception("'service_name' can not be null or empty")
-        if (not self.__log_name):
+        if (not self.__js["log"]):
             print("Disable logging.")
         
     @property
+    def configPath(self) -> str:
+        return self.__conf_file
+
+    @property
     def releaseUrl(self) -> str:
         """ the url indicate latest release of Gitea """
-        return self.__release
+        return self.__js["release_url"]
     
     @property
     def siteVersion(self) -> str:
         """ the version api of your site to check """
-        return self.__tar_ver
+        return self.__js["local_version"]
     
     @property
     def root(self) -> str:
         """ the Gitea root directory """
-        return self.__root
+        return self.__js["exe_dir"]
 
     @property
     def exeName(self) -> str:
         """ the filename without extension to replace """
-        return self.__exe_name
+        return self.__js["exe_name"]
     
     @property
     def serviceName(self) -> str:
         """ the service name to start or stop Gitea """
-        return self.__svc_name
+        return self.__js["service_name"]
     
     @property
     def isLogEnabled(self) -> bool:
         """ log enable/disable """
-        return self.__log_name != ""
+        return self.__js["log"] != ""
 
     @property
     def logFile(self) -> str:
         """ the directory to save logs """
-        return self.__log_name
+        return self.__js["log"]
