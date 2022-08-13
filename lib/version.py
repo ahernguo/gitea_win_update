@@ -11,6 +11,9 @@ class GiteaVersion:
     def __int__(self) -> int:
         return (self.Major * 1000000) + (self.Minor * 1000) + (self.Build)
 
+    def __str__(self) -> str:
+        return f"v{self.Major}.{self.Minor}.{self.Build}"
+
     def __eq__(self, __o : object) -> bool:
         if (isinstance(__o, GiteaVersion)):
             return int(self) == int(__o)

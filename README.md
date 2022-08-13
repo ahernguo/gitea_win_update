@@ -7,9 +7,10 @@ This project refers to [CMiksche/gitea-auto-update](https://github.com/CMiksche/
 ```jsonc
 {
     "release_url": "https://api.github.com/repos/go-gitea/gitea/releases/latest" /* the url indicate latest release of Gitea */,
-    "local_version": "https://127.0.0.1:80/api/v1/version" /* the version api of your site to check */,
-    "exe_dir": "D:\\Gitea" /* the Gitea root directory */,
-    "exe_name": "gitea" /* the filename without extension to replace */,
+    "check_mode": "site_api" /* 'cmd_call' use `.exe -v` to check local version; 'site_api' query currently gitea site api */,
+    "local_version": "https://127.0.0.1:80/api/v1/version" /* the version api of your site to check. (need check_mode = site_api) */,
+    "token": "abc123" /* the header token to access gitea api. (need check_mode = site_api) */,
+    "exe_path": "gitea" /* the filename without extension to replace */,
     "service_name": "gitea" /* the service name to start or stop Gitea */,
     "log": "D:\\gitea_win_upd\\update.log" /* the directory to save logs */
 }

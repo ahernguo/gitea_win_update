@@ -1,4 +1,10 @@
 import json
+from enum import Enum
+
+class CheckMode(str, Enum):
+    """ The way to check local version """
+    FILE = "cmd_call"
+    API = "site_api"
 
 class UpdateConfig:
 
@@ -12,14 +18,17 @@ class UpdateConfig:
         
         if (not self.__js["release_url"]):
             raise Exception("'release_url' can not be null or empty")
-        if (not self.__js["local_version"]):
-            raise Exception("'local_version' can not be null or empty")
-        if (not self.__js["exe_name"]):
-            raise Exception("'exe_name' can not be null or empty")
+        if (not self.__js["check_mode"]):
+            raise Exception("'check_mode' can not be null or empty")
+        if (not self.__js["exe_path"]):
+            raise Exception("'exe_path' can not be null or empty")
         if (not self.__js["service_name"]):
             raise Exception("'service_name' can not be null or empty")
-        if (not self.__js["log"]):
-            print("Disable logging.")
+        if (self.checkMode == CheckMode.API):
+            if (not self.__js["local_version"]):
+                raise Exception("'local_version' can not be null or empty")
+            if ( not self.__js["token"]):
+                raise Exception("'token' can not be null or empty")
         
     @property
     def configPath(self) -> str:
@@ -36,14 +45,9 @@ class UpdateConfig:
         return self.__js["local_version"]
     
     @property
-    def root(self) -> str:
-        """ the Gitea root directory """
-        return self.__js["exe_dir"]
-
-    @property
-    def exeName(self) -> str:
+    def exePath(self) -> str:
         """ the filename without extension to replace """
-        return self.__js["exe_name"]
+        return self.__js["exe_path"]
     
     @property
     def serviceName(self) -> str:
@@ -59,3 +63,12 @@ class UpdateConfig:
     def logFile(self) -> str:
         """ the directory to save logs """
         return self.__js["log"]
+
+    @property
+    def token(self) -> str:
+        """ the token to access """
+        return self.__js["token"]
+
+    @property
+    def checkMode(self) -> CheckMode:
+        return self.__js["check_mode"]

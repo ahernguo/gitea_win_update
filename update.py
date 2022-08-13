@@ -22,14 +22,16 @@ def main():
     conf_file = re.search(r'(?<=--config=).*', sys.argv[1], re.IGNORECASE).group(0)
 
     if (not exists(conf_file)):
-        sys.exit("Can not find the configuration \'%s\'" % conf_file)
-
-    # load configuration and check values
-    conf = UpdateConfig(conf_file)
+        sys.exit(f"Can not find the configuration \'{conf_file}\'")
 
     # initial updator
-    upd = GiteaUpdator(conf)
-    upd.CheckVersion()
+    upd = GiteaUpdator(conf_file)
+    
+    # check version. start update if need
+    if (upd.CheckVersion()):
+        print("start update")
+    else:
+        print("unnecessary to update. exit program")
 
 if __name__ == '__main__':
     main()
