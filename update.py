@@ -28,10 +28,7 @@ def main():
     upd = GiteaUpdator(conf_file)
     
     # check version. start update if need
-    if (upd.CheckVersion()):
-        print("start update")
-    else:
-        print("unnecessary to update. exit program")
+    upd.StartUpdate()
 
 if __name__ == '__main__':
     main()

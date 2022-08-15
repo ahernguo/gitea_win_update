@@ -46,7 +46,7 @@ class GiteaVersion:
 
     def __ge__(self, __o : object) -> bool:
         if (isinstance(__o, GiteaVersion)):
-            return int(self) < int(__o)
+            return int(self) >= int(__o)
         else:
             return False
 

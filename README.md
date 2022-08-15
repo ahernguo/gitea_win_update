@@ -2,7 +2,12 @@ This project refers to [CMiksche/gitea-auto-update](https://github.com/CMiksche/
 
 # Using project
 
-1. Make a configuration file (*.json)
+1. Ensure [7-Zip](https://www.7-zip.org/) is installed and add to `%path%`
+    - this project will using 7-Zip to extract / compress file
+
+> You can use `7z --help` to check install status.
+
+2. Make a configuration file (*.json)
 
 ```jsonc
 {
@@ -16,7 +21,7 @@ This project refers to [CMiksche/gitea-auto-update](https://github.com/CMiksche/
 }
 ```
 
-2. Start check and update
+3. Start check and update
 
 ```bat
 cd /d D:\gitea_win_upd
@@ -25,4 +30,4 @@ python3 update.py --config=myConfig.json
 
 > You should check `Python3` is installed. Click [HERE](https://www.python.org/downloads/) to download and install.
 
-3. Done
+4. Done
