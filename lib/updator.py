@@ -87,15 +87,13 @@ class GiteaUpdator:
     
         # for a shorter suspension of gitea service. download first
         # make a tempfile for download
-        fd, temp_path = tempfile.mkstemp(suffix=".xz")
+        temp_file = tempfile.NamedTemporaryFile(suffix=".xz").name
 
         # download file to temp file
-        self.Log.info(f"    Download new file '{download_url}' to '{temp_path}' ...")
-        with open(temp_path, "wb") as tf:
+        self.Log.info(f"    Download new file '{download_url}' to '{temp_file}' ...")
+        with open(temp_file, "wb") as fs:
             rsp = requests.get(download_url)
-            tf.write(rsp.content)
-            tf.close()
-            rsp.close()
+            fs.write(rsp.content)
 
         # stop the service. 1062 error is "Service not started"
         self.Log.info("  Stopping service ...")
@@ -125,7 +123,7 @@ class GiteaUpdator:
 
         # extract file and put to exePath
         self.Log.info("    Extracting new file ...")
-        os.popen(f"7z e \"{temp_path}\" -so > \"{self.Config.exePath}\"").read()
+        os.popen(f"7z e \"{temp_file}\" -so > \"{self.Config.exePath}\"").read()
 
         # start service
         self.Log.info("    Starting service ...")
@@ -135,8 +133,8 @@ class GiteaUpdator:
             raise Exception(f"Starting service '{self.Config.serviceName}' failed")
 
         # clean temp file
-        self.Log.info(f"    Cleaning temp file '{temp_path}' ...")
-        os.remove(temp_path)
+        self.Log.info(f"    Cleaning temp file '{temp_file}' ...")
+        os.remove(temp_file)
 
         # done
         self.Log.info(f"Done.")
