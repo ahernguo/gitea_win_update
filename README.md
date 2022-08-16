@@ -14,7 +14,7 @@ This project refers to [CMiksche/gitea-auto-update](https://github.com/CMiksche/
 
 2. Make a configuration file (*.json)
 
-    > see demo files in [demo_config](\demo_config)
+    > see demo files in [demo_config](demo_config/)
 
     ```jsonc
     {
