@@ -1,5 +1,4 @@
 import logging, os, re, requests, sys, tempfile, time
-from turtle import back, down
 from .config import CheckMode, OverwriteMode, UpdateConfig
 from .version import GiteaVersion
 
@@ -73,7 +72,7 @@ class GiteaUpdator:
         """ start to update. download → stop service → start service """
     
         # write log
-        self.Log.info(f"Starting to update gitea. Config file : {self.Config.configPath}")
+        self.Log.info(f"Starting to update gitea. Config file : '{self.Config.configPath}'")
 
         # check local version
         localVer = self.CheckLocalVersion()
@@ -97,11 +96,19 @@ class GiteaUpdator:
 
         # stop the service. 1062 error is "Service not started"
         self.Log.info("  Stopping service ...")
-        stopOut = os.popen(f"sc stop {self.Config.serviceName}").read()
-        stopChk = re.search(r"(stop_pending|stopped|1062)", stopOut, re.IGNORECASE)
-        if (not stopChk):
-            raise Exception(f"Stopping service '{self.Config.serviceName}' failed")
+        os.popen(f"sc stop {self.Config.serviceName}").read()
         
+        # wait service stopped.
+        qryChk : re.Match[str] | None = None
+        tmo = time.time() + 10 # now add 10s 
+        while (not qryChk and time.time() < tmo):
+            qryOut = os.popen(f"sc query {self.Config.serviceName}").read()
+            qryChk = re.search(r"(stopped|1062)", qryOut, re.IGNORECASE)
+            time.sleep(0.25)
+
+        if (not qryChk or time.time() > tmo):
+            raise Exception(f"Stopping service '{self.Config.serviceName}' failed")
+
         # backup if overwrite mode specified
         if (self.Config.overwriteMode == OverwriteMode.BACKUP):
             # ensure directory first. copy next.

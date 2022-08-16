@@ -1,0 +1,8 @@
+{
+    "exe_path": "D:\\gitea\\gitea.exe",
+    "service_name": "gitea",
+    "log": "D:\\gitea\\update.log",
+    "release_url": "https://api.github.com/repos/go-gitea/gitea/releases/latest",
+    "check_mode": "cmd_call",
+    "overwrite_mode": "overwrite"
+}
