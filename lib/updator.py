@@ -1,4 +1,4 @@
-import logging, os, re, requests, sys, tempfile, time
+import logging, os, re, requests, sys, tempfile, time, pathlib, shutil, stat
 from .config import CheckMode, OverwriteMode, UpdateConfig
 from .version import GiteaVersion
 
@@ -71,78 +71,116 @@ class GiteaUpdator:
     def StartUpdate(self) -> None:
         """ start to update. download → stop service → start service """
     
-        # write log
-        self.Log.info(f"Starting to update gitea. Config file : '{self.Config.configPath}'")
+        try:
+            # write log
+            self.Log.info(f"Starting to update gitea. Config file: '{self.Config.configPath}'")
 
-        # check local version
-        localVer = self.CheckLocalVersion()
-        githubVer, download_url = self.CheckGithubVersion()
-        self.Log.info(f"    Local version : {str(localVer)}, GitHub Version : {str(githubVer)}")
+            # check local version
+            localVer = self.CheckLocalVersion()
+            githubVer, download_url = self.CheckGithubVersion()
+            self.Log.info(f"    Local version: {str(localVer)}, GitHub Version: {str(githubVer)}")
 
-        # compare version
-        if (localVer >= githubVer):
-            self.Log.info("Unnecessary to update. exit program")
-            return
-    
-        # for a shorter suspension of gitea service. download first
-        # make a tempfile for download
-        temp_file = tempfile.NamedTemporaryFile(suffix=".xz").name
-
-        # download file to temp file
-        self.Log.info(f"    Download new file '{download_url}' to '{temp_file}' ...")
-        with open(temp_file, "wb") as fs:
-            rsp = requests.get(download_url)
-            fs.write(rsp.content)
-
-        # stop the service. 1062 error is "Service not started"
-        self.Log.info("  Stopping service ...")
-        os.popen(f"sc stop {self.Config.serviceName}").read()
+            # compare version
+            if (localVer >= githubVer):
+                self.Log.info("Unnecessary to update. exit program")
+                return
         
-        # wait service stopped.
-        qryChk : re.Match[str] | None = None
-        tmo = time.time() + 10 # now add 10s 
-        while (not qryChk and time.time() < tmo):
-            qryOut = os.popen(f"sc query {self.Config.serviceName}").read()
-            qryChk = re.search(r"(stopped|1062)", qryOut, re.IGNORECASE)
-            time.sleep(0.25)
+            # for a shorter suspension of gitea service. download first
+            # make a tempfile for download
+            temp_file = tempfile.NamedTemporaryFile(suffix=".xz").name
 
-        if (not qryChk or time.time() > tmo):
-            raise Exception(f"Stopping service '{self.Config.serviceName}' failed")
+            # download file to temp file
+            self.Log.info(f"    Download new file '{download_url}' to '{temp_file}' ...")
+            with open(temp_file, "wb") as fs:
+                rsp = requests.get(download_url)
+                fs.write(rsp.content)
+            self.Log.info("      ... done")
 
-        # backup if overwrite mode specified
-        if (self.Config.overwriteMode == OverwriteMode.BACKUP):
-            # ensure directory first. copy next.
-            if (not os.path.exists(self.Config.backupDir)):
-                os.makedirs(self.Config.backupDir)
-            # make the backup path
-            backup_path = os.path.join(
-                self.Config.backupDir,
-                f"gitea_backup_{time.strftime('%Y%m%d_%H%M%S')}.7z"
-            )
-            # using 7z to backup
-            self.Log.info(f"    Backup to '{backup_path}' ...")
-            os.popen(f"7z a -t7z \"{backup_path}\" -m0=lzma2 -mx=9 -aoa \"{self.Config.exePath}\"").read()
+            # stop the service. 1062 error is "Service not started"
+            self.Log.info("    Stopping service ...")
+            os.popen(f"sc stop {self.Config.serviceName}").read()
             
-        # delete file (avoid 7z error)
-        if (os.path.exists(self.Config.exePath)):
-            self.Log.info("    Deleting old file ...")
-            os.remove(self.Config.exePath)
+            # wait service stopped.
+            # loop until the `sc query` shows stopped or terminate with error
+            qryChk : re.Match[str] | None = None
+            tmo = time.time() + 10 # now add 10s as timeout
+            while ((not qryChk) and (time.time() < tmo)):
+                qryOut = os.popen(f"sc query {self.Config.serviceName}").read()
+                qryChk = re.search(r"(stopped|1062)", qryOut, re.IGNORECASE)
+                time.sleep(0.25)
 
-        # extract file and put to exePath
-        self.Log.info("    Extracting new file ...")
-        os.popen(f"7z e \"{temp_file}\" -so > \"{self.Config.exePath}\"").read()
+            if ((not qryChk) or (time.time() > tmo)):
+                raise Exception(f"Stopping service '{self.Config.serviceName}' failed")
+            else:
+                self.Log.info("      ... done")
 
-        # start service
-        self.Log.info("    Starting service ...")
-        startOut = os.popen(f"sc start {self.Config.serviceName}").read()
-        startChk = re.search(r"(start_pending|running)", startOut, re.IGNORECASE)
-        if (not startChk):
-            raise Exception(f"Starting service '{self.Config.serviceName}' failed")
+            # backup if overwrite mode specified
+            if (self.Config.overwriteMode == OverwriteMode.BACKUP):
+                # ensure directory first. copy next.
+                if (not os.path.exists(self.Config.backupDir)):
+                    os.makedirs(self.Config.backupDir)
+                # make the backup path
+                backup_path = os.path.join(
+                    self.Config.backupDir,
+                    f"gitea_backup_{time.strftime('%Y%m%d_%H%M%S')}.7z"
+                )
+                # using 7z to backup
+                self.Log.info(f"    Backup to '{backup_path}' ...")
+                os.popen(f"7z a -t7z \"{backup_path}\" -m0=lzma2 -mx=9 -aoa \"{self.Config.exePath}\"").read()
+                self.Log.info("      ... done")
+                
+            # delete file (avoid 7z error)
+            if (os.path.isfile(self.Config.exePath)):
+                self.Log.info("    Deleting old file ...")
+                success = False
+                try:
+                    # os.remove always failed in windows server 2019. also using admin permission
+                    os.chmod(self.Config.exePath, 0o777)
+                    os.remove(self.Config.exePath)
+                    success = True
+                except Exception as osE:
+                    self.Log.exception("Remove file (os)")
+                # if remove failed, trying copy to temp_dir, let cleanmgr to clean it
+                if (not success):
+                    # make new temp file with extension name '.bak'
+                    tar = tempfile.NamedTemporaryFile(suffix=".bak").name
+                    try:
+                        # moving to temp
+                        self.Log.info(f"    Moving to '{tar}' ...")
+                        shutil.move(self.Config.exePath, tar)
+                        self.Log.info("      ... done")
+                        # trying to delete again
+                        # there still have cleanmgr as last resort if failed
+                        self.Log.info("    Deleting old file from temporary ...")
+                        os.chmod(tar, 0o777)
+                        os.remove(tar)
+                    except Exception as shE:
+                        self.Log.exception("Remove file (shutil)")
 
-        # clean temp file
-        self.Log.info(f"    Cleaning temp file '{temp_file}' ...")
-        os.remove(temp_file)
+            # extract file and put to exePath
+            # using `e` (extract) and `-so` to extract to output stream
+            # so `>` can write the output stream to a new file (no append)
+            # this can save multiple steps like `shutil.move`
+            self.Log.info("    Extracting new file ...")
+            os.popen(f"7z e \"{temp_file}\" -so > \"{self.Config.exePath}\"").read()
+            self.Log.info("      ... done")
 
-        # done
-        self.Log.info(f"Done.")
+            # start service
+            self.Log.info("    Starting service ...")
+            startOut = os.popen(f"sc start {self.Config.serviceName}").read()
+            startChk = re.search(r"(start_pending|running)", startOut, re.IGNORECASE)
+            if (not startChk):
+                raise Exception(f"Starting service '{self.Config.serviceName}' failed")
+            else:
+                self.Log.info(f"      ... done")
+
+            # clean temp file
+            self.Log.info(f"    Cleaning temp file '{temp_file}' ...")
+            os.remove(temp_file)
+            self.Log.info("      ... done")
+
+            # done
+            self.Log.info("Done.")
+        except Exception as e:
+            self.Log.exception("Start Update")
 
